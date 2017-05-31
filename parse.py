@@ -50,7 +50,7 @@ class Player(object):
 
     def win_percentage(self):
     	if self.games_played == 0:
-    		return 100
+    		return 100.0
     	else:
     		return float(self.wins) / float(self.games_played) * 100.0
 
@@ -245,7 +245,7 @@ def handleChat(length, data):
 
 	#print (msg[0:10])
 	#if msg.startswith("Final score:"):
-	if "Final score:" in msg:
+	if msg.startswith("Final score:"):
 		splitted = msg.split(" ")
 		if len(splitted) == 5:
 			team_1_score = int(splitted[2].split("-")[0])
@@ -381,7 +381,7 @@ def handleMessage(length, type, data):
 	if (type == 500):
 		handleFileHeader(length, data)
 
-	# Header
+	# Game Header
 	if (type == 5):
 		handleHeader(length, data)
 
@@ -389,6 +389,7 @@ def handleMessage(length, type, data):
 	if (type == 11):
 		handleChat(length, data)
 
+	# Race State Update
 	if (type == 9):
 		handleRaceState(length, data)
 
@@ -413,10 +414,6 @@ for file_name in files:
 		fileIndex = 0
 
 		fileLength = len(rawfile)
-
-		#fileLength = fileSize(FILE_NAME)
-
-
 		#print fileLength
 
 		while fileIndex < fileLength:
