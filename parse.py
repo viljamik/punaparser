@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# https://stackoverflow.com/questions/13437727/python-write-to-excel-spreadsheet
+#
 import struct
 import os
 import sys
