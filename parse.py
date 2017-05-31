@@ -260,12 +260,17 @@ def handleChat(length, data):
 		new_score_2 = int(scores[1])
 		parts = msg.split(" ")
 		if len(parts) > 1:
-			player = players[parts[1]]
+			player_name = str(parts[1])
+
+			player = None
+			if player_name in all_players.keys():
+				player = all_players[player_name]
 
 			assistee = None
 			if (len(parts) > 2):
 				assistee_name = (parts[2])[1:-1]
-				assistee = players[assistee_name]
+				if assistee_name in all_players.keys():
+					assistee = all_players[assistee_name]
 
 			if player:
 				handleScore(new_score_1, new_score_2, player, assistee)
