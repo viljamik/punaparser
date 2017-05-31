@@ -6,6 +6,7 @@ import struct
 import os
 import sys
 import gzip
+import re
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
@@ -41,6 +42,7 @@ class Player(object):
     wins = 0
     losses = 0
     total_goals = 0
+    total_assists = 0
 
     def __init__(self, name):
         self.name = name
@@ -52,13 +54,28 @@ class Player(object):
     	else:
     		return float(self.wins) / float(self.games_played) * 100.0
 
+    def goals_per_game(self):
+    	if self.games_played == 0:
+    		return 0
+    	else:
+    		return float(self.total_goals) / float(self.games_played)
+
+    def assists_per_game(self):
+    	if self.games_played == 0:
+    		return 0
+    	else:
+    		return float(self.total_assists) / float(self.games_played)
+
     def dump_stats(self):
     	print self.name + ":"
     	print "games played: " + str(self.games_played)
     	print "wins: " + str(self.wins)
     	print "losses: " + str(self.losses)
     	print "win percentage: %.0f%%" % self.win_percentage()
-    	#print "goals: " + str(self.total_goals)
+    	print "goals: " + str(self.total_goals)
+    	print "goals per game: %.1f" % self.goals_per_game()
+    	print "assists: " + str(self.total_assists)
+    	print "assists per game: %.1f" % self.assists_per_game()
 
 def printAsHex(data):
 	print(':'.join(x.encode('hex') for x in data))
@@ -184,9 +201,22 @@ def handleHeader(length, header):
 		createPlayer(header[index:index+32], i)
 		index += 32
 
-	
+def handleScore(new_score_1, new_score_2, player, assistee):
+	global team_1_score
+	global team_2_score
 
-def handleScore(team_1_score, team_2_score):
+	if (team_1_score != new_score_1):
+		team_1_score = new_score_1
+	elif team_2_score != new_score_2:
+		team_2_score = new_score_2
+
+	if player:
+		player.total_goals += 1
+
+	if assistee:
+		assistee.total_assists += 1
+
+def handleFinalScore(team_1_score, team_2_score):
 	#print "team_1_score = " + str(team_1_score)
 	#print "team_2_score = " + str(team_2_score)
 
@@ -220,7 +250,29 @@ def handleChat(length, data):
 		if len(splitted) == 5:
 			team_1_score = int(splitted[2].split("-")[0])
 			team_2_score = int(splitted[2].split("-")[1])
-			handleScore(team_1_score, team_2_score)
+			handleFinalScore(team_1_score, team_2_score)
+
+	# Goal
+	pattern = re.compile("^[0-9]+-[0-9]*")
+	if (pattern.match(msg)):
+		scores = re.findall(r'\d+', msg)
+		new_score_1 = int(scores[0])
+		new_score_2 = int(scores[1])
+		parts = msg.split(" ")
+		if len(parts) > 1:
+			player = players[parts[1]]
+
+			assistee = None
+			if (len(parts) > 2):
+				assistee_name = (parts[2])[1:-1]
+				assistee = players[assistee_name]
+
+			if player:
+				handleScore(new_score_1, new_score_2, player, assistee)
+
+		#print "goal for player: " + player.name
+	else:
+		pass
 
 	#print "chat message: " + msg
 
