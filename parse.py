@@ -5,7 +5,7 @@
 import struct
 import os
 import sys
-import zipfile
+import gzip
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
@@ -23,7 +23,14 @@ team_2_score = 0
 
 is_server_video = False
 
+players_have_teams = False
+
+# All players for all videos
+all_players = {}
+
+# Players for single video
 players = {}
+
 
 class Player(object):
     name = ""
@@ -37,13 +44,20 @@ class Player(object):
 
     def __init__(self, name):
         self.name = name
-        print name
+        #print name
 
-    def dump_stats():
+    def win_percentage(self):
+    	if self.games_played == 0:
+    		return 100
+    	else:
+    		return float(self.wins) / float(self.games_played) * 100.0
+
+    def dump_stats(self):
     	print self.name + ":"
     	print "games played: " + str(self.games_played)
     	print "wins: " + str(self.wins)
     	print "losses: " + str(self.losses)
+    	print "win percentage: %.0f%%" % self.win_percentage()
     	print "goals: " + str(self.total_goals)
 
 def printAsHex(data):
@@ -91,32 +105,34 @@ def createPlayer(data, player_index):
 	player_name = player_name.strip()
 	player_name = player_name.strip("\0")
 
-	print "player_name: " + player_name
+	#print "player_name: " + player_name
 
-	if (player_name in players.keys()):
-		print "player" + player_name + " already exists"
-		player = players[player_name]
+	if (player_name in all_players.keys()):
+		#print "player " + player_name + " already exists"
+		player = all_players[player_name]
 	else:
-		print "creating player " + str(player_index) + " : " + player_name 
+		#print "creating player " + str(player_index) + " : " + player_name 
 		player = Player(player_name)
-		players[player_name] = player
+		all_players[player_name] = player
+
+	players[player_name] = player
 
 	player.index = player_index
 
-	print player
+	#print player
 
 def handleFileHeader(length, data):
 	video_file_type = readShort(data, 0)
-	print hex(video_file_type)
+	#print hex(video_file_type)
 	global is_server_video
 	if video_file_type == 0x07b8:
 		is_server_video = True
 	else:
 		is_server_video = False
-	print "is_server_video: " + str(is_server_video)
+	#print "is_server_video: " + str(is_server_video)
 
 def handleHeader(length, header):
-	print "header"
+	#print "header"
 
 	header_length = len(str(header))
 
@@ -130,12 +146,12 @@ def handleHeader(length, header):
 	track_hash = header[6:6+16]
 	track_name_length = readInteger(header, 22)
 
-	print lap_number
-	print track_data_length
-	print track_hash
-	print track_name_length
+	#print lap_number
+	#print track_data_length
+	#print track_hash
+	#print track_name_length
 	track_name = str(header[26:26+track_name_length])
-	print "track_name: " + track_name
+	#print "track_name: " + track_name
 
 	index = 26 + track_name_length
 
@@ -143,7 +159,7 @@ def handleHeader(length, header):
 	index += 4
 
 	track_maker = str(header[index:index+track_maker_length])
-	print "track_maker " + str(track_maker)
+	#print "track_maker " + str(track_maker)
 	index += track_maker_length
 
 	# player_data_length: 4 bytes
@@ -164,19 +180,35 @@ def handleHeader(length, header):
 
 	# Last player is "PunaBall"
 	for i in range(player_count - 1):
-		print "i"+str(i)
+		#print "i"+str(i)
 		createPlayer(header[index:index+32], i)
 		index += 32
 
 	
 
+def handleScore(team_1_score, team_2_score):
+	#print "team_1_score = " + str(team_1_score)
+	#print "team_2_score = " + str(team_2_score)
+
+	if (team_1_score > team_2_score):
+		winning_team = 0
+	else:
+		winning_team = 1
+
+	for player in players.values():
+		player.games_played += 1
+
+		if (player.team == winning_team):
+			player.wins += 1
+		else:
+			player.losses += 1
 
 def handleChat(length, data):
 	msg = str(data[4:length - 5])
 
 	msg = str(msg.strip()).decode('Cp1252')
 
-	msg = msg.decode('unicode_escape').encode('utf8')
+	#msg = msg.decode('unicode_escape').encode('utf8')
 
 
 	#print (msg[0:10])
@@ -184,13 +216,11 @@ def handleChat(length, data):
 	if "Final score:" in msg:
 		splitted = msg.split(" ")
 		if len(splitted) == 5:
-			team_1_score = splitted[2].split("-")[0]
-			team_2_score = splitted[2].split("-")[1]
+			team_1_score = int(splitted[2].split("-")[0])
+			team_2_score = int(splitted[2].split("-")[1])
+			handleScore(team_1_score, team_2_score)
 
-			print "team_1_score = " + str(team_1_score)
-			print "team_2_score = " + str(team_2_score)
-
-	print "chat message: " + msg
+	#print "chat message: " + msg
 
 # Sets correct team using player's x coordinate
 def setTeam(player, player_x, player_y):
@@ -199,11 +229,11 @@ def setTeam(player, player_x, player_y):
 		player.team = 0
 	else:
 		player.team = 1
-	print "set team for " + player.name + ":" + str(player.team)
+	#print "set team for " + player.name + ":" + str(player.team)
 
 def handleRaceState(length, data):
 
-	print "race stat len: " + str(length)
+	#print "race stat len: " + str(length)
 
 	player_count = 1#len(players)
 
@@ -219,7 +249,7 @@ def handleRaceState(length, data):
 
 	racetime = readInteger(data, 0)
 	index = index + 4
-	print "racetime: " + str(racetime)
+	#print "racetime: " + str(racetime)
 
 	global is_server_video
 
@@ -265,16 +295,19 @@ def handleRaceState(length, data):
 		#index = index + 24 - 16
 
 		#print "index:" + str(index)
+		global players_have_teams
 
-		if racetime < 10000:
+		if not players_have_teams and racetime < 10000:
 			player = playerByIndex(i)
 			if player:
 				setTeam(player, player_x, player_y)
+
+	players_have_teams = True
 			#print player.name
 
 		#print "x: " + str(player_x) + " y: " + str(player_y)
 		#print "next"
-	print ""
+	#print ""
 
 	#print(':'.join(x.encode('hex') for x in data))
 	
@@ -305,7 +338,14 @@ def handleMessage(length, type, data):
 files = sys.argv[1:]
 
 for file_name in files:
-	with open(file_name, "rb") as file:
+
+	with gzip.open(file_name, "rb") as file:
+
+		players = {}
+		global players_have_teams
+		players_have_teams = False
+
+	#with open(file_name, "rb") as file:
 		rawfile = file.read()
 
 		fileIndex = 0
@@ -315,7 +355,7 @@ for file_name in files:
 		#fileLength = fileSize(FILE_NAME)
 
 
-		print fileLength
+		#print fileLength
 
 		while fileIndex < fileLength:
 
@@ -342,4 +382,7 @@ for file_name in files:
 
 
 
+for player in all_players.values():
+	player.dump_stats()
+	print " "
 
