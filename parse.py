@@ -2,14 +2,19 @@
 # -*- coding: utf-8 -*-
 import struct
 import os
-import sys  
+import sys
+import zipfile
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
+if (len(sys.argv) < 2):
+	print "Usage: ./parse.py filename.tsr ... "
+	sys.exit()
+
 #FILE_NAME = "video"
 #FILE_NAME = "server"
-FILE_NAME = "client"
+#FILE_NAME = "client"
 
 team_1_score = 0
 team_2_score = 0
@@ -31,6 +36,13 @@ class Player(object):
     def __init__(self, name):
         self.name = name
         print name
+
+    def dump_stats():
+    	print self.name + ":"
+    	print "games played: " + str(self.games_played)
+    	print "wins: " + str(self.wins)
+    	print "losses: " + str(self.losses)
+    	print "goals: " + str(self.total_goals)
 
 def printAsHex(data):
 	print(':'.join(x.encode('hex') for x in data))
@@ -288,40 +300,43 @@ def handleMessage(length, type, data):
 
 	pass
 
-with open(FILE_NAME, "rb") as file:
-	rawfile = file.read()
+files = sys.argv[1:]
 
-	fileIndex = 0
+for file_name in files:
+	with open(file_name, "rb") as file:
+		rawfile = file.read()
 
-	fileLength = len(rawfile)
+		fileIndex = 0
 
-	#fileLength = fileSize(FILE_NAME)
+		fileLength = len(rawfile)
+
+		#fileLength = fileSize(FILE_NAME)
 
 
-	print fileLength
+		print fileLength
 
-	while fileIndex < fileLength:
+		while fileIndex < fileLength:
 
-		#print "fileIndex " + str(fileIndex)
+			#print "fileIndex " + str(fileIndex)
 
-		message_length = readInteger(rawfile, fileIndex)
-		message_type = readInteger(rawfile, fileIndex + 4)
+			message_length = readInteger(rawfile, fileIndex)
+			message_type = readInteger(rawfile, fileIndex + 4)
 
-		short_message = (message_length & 0xff000000) != 0
-		#print "short_message: " + str(short_message)
+			short_message = (message_length & 0xff000000) != 0
+			#print "short_message: " + str(short_message)
 
-		if short_message or message_length == 0:
-			message_length = 2
+			if short_message or message_length == 0:
+				message_length = 2
 
-		#print "message_length: " + str(message_length)
+			#print "message_length: " + str(message_length)
 
-		if not short_message:
-			handleMessage(message_length, message_type, rawfile[fileIndex+8 : fileIndex+8+message_length])
+			if not short_message:
+				handleMessage(message_length, message_type, rawfile[fileIndex+8 : fileIndex+8+message_length])
 
-		if (message_length > 0 and not short_message):
-			fileIndex = fileIndex + message_length + 4
-		else:
-			fileIndex = fileIndex + 2
+			if (message_length > 0 and not short_message):
+				fileIndex = fileIndex + message_length + 4
+			else:
+				fileIndex = fileIndex + 2
 
 
 
