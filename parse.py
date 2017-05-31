@@ -58,7 +58,7 @@ class Player(object):
     	print "wins: " + str(self.wins)
     	print "losses: " + str(self.losses)
     	print "win percentage: %.0f%%" % self.win_percentage()
-    	print "goals: " + str(self.total_goals)
+    	#print "goals: " + str(self.total_goals)
 
 def printAsHex(data):
 	print(':'.join(x.encode('hex') for x in data))
@@ -192,8 +192,10 @@ def handleScore(team_1_score, team_2_score):
 
 	if (team_1_score > team_2_score):
 		winning_team = 0
-	else:
+	elif (team_2_score > team_1_score):
 		winning_team = 1
+	else: # DRAW
+		winning_team = 2
 
 	for player in players.values():
 		player.games_played += 1
@@ -252,6 +254,7 @@ def handleRaceState(length, data):
 	#print "racetime: " + str(racetime)
 
 	global is_server_video
+	global players_have_teams
 
 	if is_server_video:
 		race_stat_size = 32
@@ -295,7 +298,6 @@ def handleRaceState(length, data):
 		#index = index + 24 - 16
 
 		#print "index:" + str(index)
-		global players_have_teams
 
 		if not players_have_teams and racetime < 10000:
 			player = playerByIndex(i)
@@ -339,10 +341,13 @@ files = sys.argv[1:]
 
 for file_name in files:
 
+	# Skip directories
+	if (os.path.isdir(file_name)):
+		continue
+
 	with gzip.open(file_name, "rb") as file:
 
 		players = {}
-		global players_have_teams
 		players_have_teams = False
 
 	#with open(file_name, "rb") as file:
