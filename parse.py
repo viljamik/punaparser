@@ -230,10 +230,11 @@ def handleFinalScore(team_1_score, team_2_score):
 	for player in players.values():
 		player.games_played += 1
 
-		if (player.team == winning_team):
-			player.wins += 1
-		else:
-			player.losses += 1
+		if winning_team != 2:
+			if (player.team == winning_team):
+				player.wins += 1
+			else:
+				player.losses += 1
 
 def handleChat(length, data):
 	msg = str(data[4:length - 5])
