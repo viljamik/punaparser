@@ -396,12 +396,33 @@ def handleMessage(length, type, data):
 
 	pass
 
+def is_gzip_file(file_name):
+	f = open(file_name)
+	magic = f.read(2)
+	f.close()
+	if magic != '\037\213':
+		return False
+	else:
+		return True
+
+
 files = sys.argv[1:]
+
+# Read files in given directory
+if len(files) == 1 and os.path.isdir(files[0]):
+	files = [os.path.join(files[0],fn) for fn in next(os.walk(files[0]))[2]]
 
 for file_name in files:
 
+	#print file_name
+
 	# Skip directories
 	if (os.path.isdir(file_name)):
+		print "skipping path: " + file_name
+		continue
+
+	if not is_gzip_file(file_name):
+		print "skipping unknown file: " + file_name
 		continue
 
 	with gzip.open(file_name, "rb") as file:
